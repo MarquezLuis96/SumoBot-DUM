@@ -211,10 +211,31 @@ int find_out_ir() {
 
 /*
  SENSE_SINGLE_US(INT US_PIN_OUT, INT US_PIN_IN) - SENSA EL SENSOR DECLARADO
-  US_PIN_OUT (TRIGGER) - PIN PARA ENVIAR LA SEÑAL SÓNICA
-  US_PIN_IN (ECHO) - PIN PARA RECIBIR LA SEÑAL SÓNICA
+  US_PIN_TRIGG (TRIGGER) - PIN PARA ENVIAR LA SEÑAL SÓNICA
+  US_PIN_ECHO (ECHO) - PIN PARA RECIBIR LA SEÑAL SÓNICA
   SE RETORNA LA DISTANCIA OBTENIDA EN LA MEDICIÓN
 */
+float sense_single_us(int us_pin_trigg, int us_pin_echo) {
+  
+  //Declarando variables auxiliares
+  float duracion;
+  float distancia_cm;
+  
+  //Enviando señal ultrasónica
+  digitalWrite(us_pin_trigg, LOW);
+  delayMicroseconds(4);
+  digitalWrite(us_pin_trigg, HIGH);
+  delayMicroseconds(10);
+  digitalWrite(us_pin_trigg, LOW);
+
+  //Recibiendo señal
+   duracion = pulseIn(us_pin_echo, HIGH);
+
+   //De tiempo a distancia
+   distancia_cm = ((duracion/2) * 0.0344);
+
+   return distancia_cm;
+}
 
 /*============================================================ - LOOP - ============================================================*/
 void loop() {
