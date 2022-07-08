@@ -35,7 +35,17 @@ int IR4 = 34;
 
 /*=============== - ULTRASONIC SENSORS - ===============*/
 
-//
+//1ST ULTRASONIC (US1) - PRIMER ULTRASÓNICO
+int US1_TRIGG = 32;
+int US1_ECHO = 35;
+
+//2ND ULTRASONIC (US2) - SEGUNDO ULTRASÓNICO
+int US2_TRIGG = 18;
+int US2_ECHO = 19;
+
+//3RD ULTRASONIC (US3) - TERCER ULTRASÓNICO
+int US3_TRIGG = 33;
+int US3_ECHO = 25;
 
 /*============================== - MOTORS - ==============================*/
 
@@ -48,10 +58,36 @@ void setup() {
   pinMode(tryled, OUTPUT);
 
   //INITIALIZING IR-SENSORS - DIGITAL INPUT
+  //IR1
   pinMode(IR1, INPUT);
+
+  //IR2
   pinMode(IR2, INPUT);
+
+  //IR3
   pinMode(IR3, INPUT);
+
+  //IR4
   pinMode(IR4, INPUT);
+
+  //INITIALIZING US-SENSORS - DIGITAL INPUT-OUTPUT
+  //US1
+    //TRIGGER
+      pinMode(US1_TRIGG, OUTPUT);
+    //ECHO
+      pinMode(US1_ECHO, INPUT);
+    
+  //US2
+    //TRIGGER
+      pinMode(US2_TRIGG, OUTPUT);
+    //ECHO
+      pinMode(US2_ECHO, INPUT);
+    
+  //US3
+    //TRIGGER
+      pinMode(US3_TRIGG, OUTPUT);
+    //ECHO
+      pinMode(US3_ECHO, INPUT);
 
   //INITIALIZING SERIAL MONITOR
   Serial.begin(S_MONITOR_BAUDRATE);
@@ -171,6 +207,15 @@ int find_out_ir() {
   }
 }
 
+/*============================== - INFRARED SENSORS - ==============================*/
+
+/*
+ SENSE_SINGLE_US(INT US_PIN_OUT, INT US_PIN_IN) - SENSA EL SENSOR DECLARADO
+  US_PIN_OUT (TRIGGER) - PIN PARA ENVIAR LA SEÑAL SÓNICA
+  US_PIN_IN (ECHO) - PIN PARA RECIBIR LA SEÑAL SÓNICA
+  SE RETORNA LA DISTANCIA OBTENIDA EN LA MEDICIÓN
+*/
+
 /*============================================================ - LOOP - ============================================================*/
 void loop() {
 
@@ -178,6 +223,7 @@ void loop() {
   if (sense_all_ir() == true) {
     //TODOS LOS SENSORES ESTÁN DENTRO DEL ÁREA
     //SE PROCEDE A SENSAR CON LOS SENSORES ULTRASÓNICOS
+    Serial.println("Todo en orden... Se procede a sensar ultrasonicos...");
   }
   else {
     //AL MENOS UNO DE LOS SENSORES NO ESTÁ DENTRO DEL ÁREA
@@ -190,58 +236,74 @@ void loop() {
 
       case 1234:
         //RECONOCIMIENTO DE PÉRDIDA
+        Serial.println("Todos los infrarojos estan fuera - Hemos perdido.");
         break;
 
       case 123:
         //GIRAR UN POCO A LA IZQUIERDA YENDO HACIA ADELANTE Y RUEDAS TRASERA HACIA ADELANTE
+        Serial.println("IR-D Dentro del area - Gira 45° adelante-izquierda y luego avanza.");
         break;
 
       case 124:
         //GIRAR UN POCO A LA IZQUIERDA YENDO HACIA ATRÁS Y RUEDAS DELANTERAS HACIA ATRÁS
+        Serial.println("IR-C Dentro del area - Gira 45° atras-izquierda y luego retrocede.");
+        //Se puede girar luego 180°?
         break;
 
       case 12:
         //GIRAR 90 GRADOS A LA IZQUIERDA YENDO HACIA ADELANTE Y LUEGO AVANZAR
+        Serial.println("IR-C e IR-D Dentro del area - Gira 90° adelante-izquierda y luego avanza.");
         break;
 
       case 134:
         //GIRAR UN POCO HACIA LA DERECHA YENDO HACIA ATRAS Y LUEGO RUEDAS DELANTERAS HACIA ATRÁS
+        Serial.println("IR-B Dentro del area - Gira 45° atras-derecha y luego retrocede.");
+        //Se puede girar luego 180°?
         break;
 
       case 14:
         // RETROCEDER
+        Serial.println("IR-B e IR-C Dentro del area - Retrocede y gira 180°.");
         break;
 
       case 1:
         //GIRAR UN POCO HACIA LA IZQUIERDA YENDO HACIA ATRAS Y LUEGO DAR VUELTA PARA BUSCAR OPONENTE
+        Serial.println("IR-B, IR-C e IR-D Dentro del area - Gira 45° atras-izquierda y gira 180°.");
         break;
 
       case 234:
         //GIRAR HACIA LA DERECHA YENDO HACIA ADELANTE Y LUEGO TRASERAS HACIA ADELANTE
+        Serial.println("IR-A Dentro del area - Gira 45° adelante-derecha y avanza.");
         break;
 
       case 23:
         //AVANZAR
+        Serial.println("IR-A e IR-D Dentro del area - Avanza.");
         break;
 
       case 2:
         //GIRAR HACIA LA IZQUIERDA YENDO HACIA ADELANTE
+        Serial.println("IR-A, IR-C e IR-D Dentro del area - gira 45° adelante-izquierda y avanza.");
         break;
 
       case 34:
         //GIRAR 90 GRADOS A LA DERECHA YENDO HACIA ADELANTE Y LUEGO AVANZAR
+        Serial.println("IR-A e IR-B Dentro del area - gira 90° adelante-derecha y avanza.");
         break;
 
       case 3:
         //GIRAR UN POCO HACIA LA DERECHA YENDO HACIA ADELANTE
+        Serial.println("IR-A, IR-B e IR-D Dentro del area - gira 45° adelante-derecha y avanza.");
         break;
 
       case 4:
         //GIRAR UN POCO HACIA LA DERECHA YENDO HACIA ATRAS
+        Serial.println("IR-A, IR-B e IR-C Dentro del area - gira 45° atras-izquierda y gira 180°.");
         break;
 
       default:
         //LOOP O BUSCAR OPONENTE
+        Serial.println("Algo anda mal... Este mensaje no deberia estarse reproduciendo... ");
         break;
     }
   }
