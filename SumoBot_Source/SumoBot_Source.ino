@@ -3,8 +3,14 @@
 //LOOPDELAY - INDICA EL RETRASO QUE TENDRÁ EL MÉTODO VOID-LOOP
 int LOOPDELAY = 50;
 
-//S-MONITOR_BAUDRATE - INDICA LOS BAUDIOS DEL MONITOR SERIAL
+//S_MONITOR_BAUDRATE - INDICA LOS BAUDIOS DEL MONITOR SERIAL
 int S_MONITOR_BAUDRATE = 9600;
+
+//DOWN_LIMIT_DISTANCE - INDICA LA EL MÍNIMO DE DISTANCIA PARA SER CONSIDERADA VÁLIDA (MEDIDO EN CM)
+float DOWN_LIMIT_DISTANCE = 0;
+
+//UP_LIMIT_DISTANCE - INDICA LA EL MÍNIMO DE DISTANCIA PARA SER CONSIDERADA VÁLIDA (MEDIDO EN CM)
+float UP_LIMIT_DISTANCE = 150.5;
 
 /*============================================================ - PIN DECLARATIONS - ============================================================*/
 
@@ -72,22 +78,22 @@ void setup() {
 
   //INITIALIZING US-SENSORS - DIGITAL INPUT-OUTPUT
   //US1
-    //TRIGGER
-      pinMode(US1_TRIGG, OUTPUT);
-    //ECHO
-      pinMode(US1_ECHO, INPUT);
-    
+  //TRIGGER
+  pinMode(US1_TRIGG, OUTPUT);
+  //ECHO
+  pinMode(US1_ECHO, INPUT);
+
   //US2
-    //TRIGGER
-      pinMode(US2_TRIGG, OUTPUT);
-    //ECHO
-      pinMode(US2_ECHO, INPUT);
-    
+  //TRIGGER
+  pinMode(US2_TRIGG, OUTPUT);
+  //ECHO
+  pinMode(US2_ECHO, INPUT);
+
   //US3
-    //TRIGGER
-      pinMode(US3_TRIGG, OUTPUT);
-    //ECHO
-      pinMode(US3_ECHO, INPUT);
+  //TRIGGER
+  pinMode(US3_TRIGG, OUTPUT);
+  //ECHO
+  pinMode(US3_ECHO, INPUT);
 
   //INITIALIZING SERIAL MONITOR
   Serial.begin(S_MONITOR_BAUDRATE);
@@ -210,17 +216,17 @@ int find_out_ir() {
 /*============================== - INFRARED SENSORS - ==============================*/
 
 /*
- SENSE_SINGLE_US(INT US_PIN_OUT, INT US_PIN_IN) - SENSA EL SENSOR DECLARADO
+  SENSE_SINGLE_US(INT US_PIN_OUT, INT US_PIN_IN) - SENSA EL SENSOR DECLARADO
   US_PIN_TRIGG (TRIGGER) - PIN PARA ENVIAR LA SEÑAL SÓNICA
   US_PIN_ECHO (ECHO) - PIN PARA RECIBIR LA SEÑAL SÓNICA
   SE RETORNA LA DISTANCIA OBTENIDA EN LA MEDICIÓN
 */
 float sense_single_us(int us_pin_trigg, int us_pin_echo) {
-  
+
   //Declarando variables auxiliares
   float duracion;
   float distancia_cm;
-  
+
   //Enviando señal ultrasónica
   digitalWrite(us_pin_trigg, LOW);
   delayMicroseconds(4);
@@ -229,12 +235,95 @@ float sense_single_us(int us_pin_trigg, int us_pin_echo) {
   digitalWrite(us_pin_trigg, LOW);
 
   //Recibiendo señal
-   duracion = pulseIn(us_pin_echo, HIGH);
+  duracion = pulseIn(us_pin_echo, HIGH);
 
-   //De tiempo a distancia
-   distancia_cm = ((duracion/2) * 0.0344);
+  //De tiempo a distancia
+  distancia_cm = ((duracion / 2) * 0.0344);
 
-   return distancia_cm;
+  return distancia_cm;
+}
+
+/*
+  VALIDATE_US_DISTANCE(FLOAT DISTANCE) - VALIDA QUE LA DISTANCIA SENSADA
+  SEA VÁLIDA (ESTÉ EN EL RANGO VÁLIDO)
+  RETORNA TRUE SI CUNMPLE LA CONDICIÓN Y FALSE SI NO LA CUMPLE
+*/
+bool validate_us_distance(float distance) {
+  if (distance >= DOWN_LIMIT_DISTANCE && distance <= UP_LIMIT_DISTANCE) {
+    return true;
+  }
+  else {
+    return false;
+  }
+}
+
+/*
+  SENSE_ALL_US() - SENSA TODOS LOS SENSORES ULTRASÓNICOS
+  TOMA LA DECISION INDICADA PARA QUE SEA EJECUTADA POR LOS MOTORES
+*/
+void sense_all_us() {
+  //Distancias
+  float distance_US_1 = sense_single_us(US1_TRIGG, US1_ECHO);
+  float distance_US_2 = sense_single_us(US2_TRIGG, US2_ECHO);
+  float distance_US_3 = sense_single_us(US3_TRIGG, US3_ECHO);
+
+  //calculando cual es el sensor que más cerca tiene un objeto
+  if (distance_US_1 < distance_US_2) {
+    if (distance_US_1 < distance_US_3) {
+      //El sensor ultrasónico 1 es el que tiene al objeto más cercano
+      if (validate_us_distance(distance_US_1) == true) {
+        //Avanzar hacia adelante
+        Serial.print("Avanzar hacia adelante - Distancia objeto: ");
+        Serial.print(distance_US_1);
+        Serial.println(" cm");
+      }
+      else {
+        //Avanzar un poco hacia adelante
+        Serial.println("Distancia no válida - Avanzar un poco hacia adelante ");
+      }
+    }
+    else {
+      //El sensor ultrasónico 3 es el que tiene al objeto más cercano
+      if (validate_us_distance(distance_US_3) == true) {
+        //Girar 90° a la izquierda
+        Serial.print("Girar 90° a la izquierda - Distancia objeto: ");
+        Serial.print(distance_US_3);
+        Serial.println(" cm");
+      }
+      else {
+        //Avanzar un poco hacia adelante
+        Serial.println("Distancia no válida - Avanzar un poco hacia adelante ");
+      }
+    }
+  }
+  else {
+    if (distance_US_2 < distance_US_3) {
+      //El sensor ultrasónico 2 es el que tiene al objeto más cercano
+      if (validate_us_distance(distance_US_2) == true) {
+        //Girar 90° a la derecha
+        Serial.print("Girar 90° a la derecha - Distancia objeto: ");
+        Serial.print(distance_US_2);
+        Serial.println(" cm");
+      }
+      else {
+        //Avanzar un poco hacia adelante
+        Serial.println("Distancia no válida - Avanzar un poco hacia adelante ");
+      }      
+    }
+    else {
+      //El sensor ultrasónico 3 es el que tiene al objeto más cercano
+      if (validate_us_distance(distance_US_3) == true) {
+        //Girar 90° a la izquierda
+        Serial.print("Girar 90° a la izquierda - Distancia objeto: ");
+        Serial.print(distance_US_3);
+        Serial.println(" cm");
+      }
+      else {
+        //Avanzar un poco hacia adelante
+        Serial.println("Distancia no válida - Avanzar un poco hacia adelante ");
+      }      
+    }
+  }
 }
 
 /*============================================================ - LOOP - ============================================================*/
@@ -245,6 +334,7 @@ void loop() {
     //TODOS LOS SENSORES ESTÁN DENTRO DEL ÁREA
     //SE PROCEDE A SENSAR CON LOS SENSORES ULTRASÓNICOS
     Serial.println("Todo en orden... Se procede a sensar ultrasonicos...");
+    sense_all_us();
   }
   else {
     //AL MENOS UNO DE LOS SENSORES NO ESTÁ DENTRO DEL ÁREA
