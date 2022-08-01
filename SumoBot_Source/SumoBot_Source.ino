@@ -342,6 +342,7 @@ void sense_all_us() {
       else {
         //Avanzar un poco hacia adelante
         Serial.println("Distancia no válida - Avanzar un poco hacia adelante ");
+        moving(-150,-135,NORM_SPD,SLOW_SPD);
       }
     }
   }
@@ -358,6 +359,7 @@ void sense_all_us() {
       else {
         //Avanzar un poco hacia adelante
         Serial.println("Distancia no válida - Avanzar un poco hacia adelante ");
+        moving(-150,-135,NORM_SPD,SLOW_SPD);
       }      
     }
     else {
@@ -371,6 +373,7 @@ void sense_all_us() {
       else {
         //Avanzar un poco hacia adelante
         Serial.println("Distancia no válida - Avanzar un poco hacia adelante ");
+        moving(-150,-135,NORM_SPD,SLOW_SPD);
       }      
     }
   }
