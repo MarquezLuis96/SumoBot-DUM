@@ -1,5 +1,6 @@
 /*============================================================ - LIBRARIES & PRE-PROCESSOR INSTRUCTIONS - ============================================================*/
 //LIBRARIES
+#include <AccelStepper.h>
 #include "BluetoothSerial.h"
 
 //PRE-PROCESSORS INSTRUCTIONS
@@ -8,6 +9,7 @@
 #endif
 
 /*============================================================ - CONSTS DECLARATION - ============================================================*/
+const int stepsPerRevolution = 200;
 
 //LOOPDELAY - INDICA EL RETRASO QUE TENDRÁ EL MÉTODO VOID-LOOP
 int LOOPDELAY = 50;
@@ -18,8 +20,8 @@ int S_MONITOR_BAUDRATE = 9600;
 //DOWN_LIMIT_DISTANCE - INDICA LA EL MÍNIMO DE DISTANCIA PARA SER CONSIDERADA VÁLIDA (MEDIDO EN CM)
 float DOWN_LIMIT_DISTANCE = 0;
 
-//UP_LIMIT_DISTANCE - INDICA LA EL MÍNIMO DE DISTANCIA PARA SER CONSIDERADA VÁLIDA (MEDIDO EN CM)
-float UP_LIMIT_DISTANCE = 150.5;
+//UP_LIMIT_DISTANCE - INDICA LA EL MAXIMO DE DISTANCIA PARA SER CONSIDERADA VÁLIDA (MEDIDO EN CM)
+float UP_LIMIT_DISTANCE = 45;
 
 /*============================================================ - PIN DECLARATIONS - ============================================================*/
 
@@ -30,10 +32,6 @@ BluetoothSerial SerialBT;
 
 //TRYLED - LED DE PRUEBAS
 int tryled = 2;
-
-/*============================== - SENSORS - ==============================*/
-
-//
 
 /*=============== - INFRARED SENSORS - ===============*/
 
@@ -56,8 +54,9 @@ int US1_TRIGG = 32;
 int US1_ECHO = 35;
 
 //2ND ULTRASONIC (US2) - SEGUNDO ULTRASÓNICO
-int US2_TRIGG = 18;
-int US2_ECHO = 19;
+//int US2_TRIGG = 21;
+int US2_TRIGG = 21;
+int US2_ECHO = 19; // 22
 
 //3RD ULTRASONIC (US3) - TERCER ULTRASÓNICO
 int US3_TRIGG = 33;
@@ -65,7 +64,23 @@ int US3_ECHO = 25;
 
 /*============================== - MOTORS - ==============================*/
 
-//
+// CONEXIONES DEL MOTOR IZQUIERDO
+const int AIn1_IZQ = 26;
+const int AIn2_IZQ = 27;
+const int BIn1_IZQ = 14;
+const int BIn2_IZQ = 12;
+
+// CONEXIONES DEL MOTOR DERECHO
+const int AIn1_DER = 22;
+const int AIn2_DER = 5;
+const int BIn1_DER = 17;
+const int BIn2_DER = 16;
+
+const int NORM_SPD = 300;
+const int SLOW_SPD = 270;
+
+AccelStepper STEPPER_LEFT(AccelStepper::FULL4WIRE, AIn1_IZQ, AIn2_IZQ, BIn1_IZQ, BIn2_IZQ);  // PARA CONTROLAR EL MOTOR IZQUIERDO
+AccelStepper STEPPER_RIGHT(AccelStepper::FULL4WIRE, AIn1_DER, AIn2_DER, BIn1_DER, BIn2_DER);  // PARA CONTROLAR EL MOTOR DERECHO
 
 /*============================================================ - SETUP - ============================================================*/
 void setup() {
@@ -104,6 +119,26 @@ void setup() {
   pinMode(US3_TRIGG, OUTPUT);
   //ECHO
   pinMode(US3_ECHO, INPUT);
+
+  pinMode(AIn1_IZQ, OUTPUT);
+  pinMode(AIn2_IZQ, OUTPUT);
+  pinMode(BIn1_IZQ, OUTPUT);
+  pinMode(BIn2_IZQ, OUTPUT);
+
+  pinMode(AIn1_DER, OUTPUT);
+  pinMode(AIn2_DER, OUTPUT);
+  pinMode(BIn1_DER, OUTPUT);
+  pinMode(BIn2_DER, OUTPUT);
+  
+  // ACELERACIÓN, VELOCIDAD Y VELOCIDAD MAXIMA DEL MOTOR IZQUIERDO
+  STEPPER_LEFT.setAcceleration(150);
+  STEPPER_LEFT.setMaxSpeed(500);
+  STEPPER_LEFT.setSpeed(NORM_SPD);
+  
+  // ACELERACIÓN, VELOCIDAD Y VELOCIDAD MAXIMA DEL MOTOR DERECHO  
+  STEPPER_RIGHT.setAcceleration(150);
+  STEPPER_RIGHT.setMaxSpeed(500);
+  STEPPER_RIGHT.setSpeed(NORM_SPD);
 
   //INITIALIZING SERIAL MONITOR
   Serial.begin(S_MONITOR_BAUDRATE);
@@ -225,7 +260,7 @@ int find_out_ir() {
   }
 }
 
-/*============================== - INFRARED SENSORS - ==============================*/
+/*============================== - ULTRA SONIC SENSORS - ==============================*/
 
 /*
   SENSE_SINGLE_US(INT US_PIN_OUT, INT US_PIN_IN) - SENSA EL SENSOR DECLARADO
@@ -288,6 +323,7 @@ void sense_all_us() {
         Serial.print("Avanzar hacia adelante - Distancia objeto: ");
         Serial.print(distance_US_1);
         Serial.println(" cm");
+        moving(-200,200,NORM_SPD,NORM_SPD);
       }
       else {
         //Avanzar un poco hacia adelante
@@ -301,6 +337,7 @@ void sense_all_us() {
         Serial.print("Girar 90° a la izquierda - Distancia objeto: ");
         Serial.print(distance_US_3);
         Serial.println(" cm");
+        moving(-150,-135,NORM_SPD,SLOW_SPD);
       }
       else {
         //Avanzar un poco hacia adelante
@@ -316,6 +353,7 @@ void sense_all_us() {
         Serial.print("Girar 90° a la derecha - Distancia objeto: ");
         Serial.print(distance_US_2);
         Serial.println(" cm");
+        moving(135,150,SLOW_SPD,NORM_SPD);
       }
       else {
         //Avanzar un poco hacia adelante
@@ -336,6 +374,22 @@ void sense_all_us() {
       }      
     }
   }
+}
+
+void moving(long L_STEP,long R_STEP,long L_SPD,long R_SPD) {
+  STEPPER_LEFT.moveTo(L_STEP);
+  STEPPER_RIGHT.moveTo(R_STEP);
+  STEPPER_LEFT.setSpeed(L_SPD);
+  STEPPER_RIGHT.setSpeed(R_SPD);
+  while((STEPPER_LEFT.distanceToGo()> 0) && (STEPPER_RIGHT.distanceToGo()> 0)) {
+    STEPPER_LEFT.run();
+    STEPPER_RIGHT.run();
+    Serial.println("corriendo");
+    SerialBT.println("Corriendo");
+  }
+  Serial.println("deteniendo");
+  SerialBT.println("deteniendo");
+
 }
 
 /*============================================================ - LOOP - ============================================================*/
@@ -380,6 +434,7 @@ void loop() {
         //GIRAR 90 GRADOS A LA IZQUIERDA YENDO HACIA ADELANTE Y LUEGO AVANZAR
         Serial.println("IR-C e IR-D Dentro del area - Gira 90° adelante-izquierda y luego avanza.");
         SerialBT.println("IR-C e IR-D Dentro del area - Gira 90° adelante-izquierda y luego avanza.");
+        moving(-150,-135,NORM_SPD,SLOW_SPD);
         break;
 
       case 134:
@@ -393,12 +448,14 @@ void loop() {
         // RETROCEDER
         Serial.println("IR-B e IR-C Dentro del area - Retrocede y gira 180°.");
         SerialBT.println("IR-B e IR-C Dentro del area - Retrocede y gira 180°.");
+        moving(100,-100,NORM_SPD,NORM_SPD);
         break;
 
       case 1:
         //GIRAR UN POCO HACIA LA IZQUIERDA YENDO HACIA ATRAS Y LUEGO DAR VUELTA PARA BUSCAR OPONENTE
         Serial.println("IR-B, IR-C e IR-D Dentro del area - Gira 45° atras-izquierda y gira 180°.");
         SerialBT.println("IR-B, IR-C e IR-D Dentro del area - Gira 45° atras-izquierda y gira 180°.");
+        moving(100,-100,NORM_SPD,NORM_SPD);
         break;
 
       case 234:
@@ -411,30 +468,35 @@ void loop() {
         //AVANZAR
         Serial.println("IR-A e IR-D Dentro del area - Avanza.");
         SerialBT.println("IR-A e IR-D Dentro del area - Avanza.");
+        moving(-100,100,NORM_SPD,NORM_SPD);
         break;
 
       case 2:
         //GIRAR HACIA LA IZQUIERDA YENDO HACIA ADELANTE
         Serial.println("IR-A, IR-C e IR-D Dentro del area - gira 45° adelante-izquierda y avanza.");
         SerialBT.println("IR-A, IR-C e IR-D Dentro del area - gira 45° adelante-izquierda y avanza.");
+        moving(-100,100,NORM_SPD,NORM_SPD);
         break;
 
       case 34:
         //GIRAR 90 GRADOS A LA DERECHA YENDO HACIA ADELANTE Y LUEGO AVANZAR
         Serial.println("IR-A e IR-B Dentro del area - gira 90° adelante-derecha y avanza.");
         SerialBT.println("IR-A e IR-B Dentro del area - gira 90° adelante-derecha y avanza.");
+        moving(135,150,SLOW_SPD,NORM_SPD);
         break;
 
       case 3:
         //GIRAR UN POCO HACIA LA DERECHA YENDO HACIA ADELANTE
         Serial.println("IR-A, IR-B e IR-D Dentro del area - gira 45° adelante-derecha y avanza.");
         SerialBT.println("IR-A, IR-B e IR-D Dentro del area - gira 45° adelante-derecha y avanza.");
+        moving(-100,100,NORM_SPD,NORM_SPD);
         break;
 
       case 4:
         //GIRAR UN POCO HACIA LA DERECHA YENDO HACIA ATRAS
         Serial.println("IR-A, IR-B e IR-C Dentro del area - gira 45° atras-izquierda y gira 180°.");
         SerialBT.println("IR-A, IR-B e IR-C Dentro del area - gira 45° atras-izquierda y gira 180°.");
+        moving(100,-100,NORM_SPD,NORM_SPD);
         break;
 
       default:
