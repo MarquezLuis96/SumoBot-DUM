@@ -327,7 +327,7 @@ void sense_all_us() {
       }
       else {
         //Avanzar un poco hacia adelante
-        Serial.println("Distancia no válida - Avanzar un poco hacia adelante ");
+        Serial.println("Distancia no válida - Rotar a la izquierda para buscar");
       }
     }
     else {
@@ -358,7 +358,7 @@ void sense_all_us() {
       }
       else {
         //Avanzar un poco hacia adelante
-        Serial.println("Distancia no válida - Avanzar un poco hacia adelante ");
+        Serial.println("Distancia no válida - Rotar a la izquierda para buscar");
         moving(-150,-135,NORM_SPD,SLOW_SPD);
       }      
     }
@@ -372,7 +372,7 @@ void sense_all_us() {
       }
       else {
         //Avanzar un poco hacia adelante
-        Serial.println("Distancia no válida - Avanzar un poco hacia adelante ");
+        Serial.println("Distancia no válida - Rotar a la izquierda para buscar");
         moving(-150,-135,NORM_SPD,SLOW_SPD);
       }      
     }
