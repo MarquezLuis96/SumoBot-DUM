@@ -9,19 +9,22 @@
 #endif
 
 /*============================================================ - CONSTS DECLARATION - ============================================================*/
-const int stepsPerRevolution = 200;
 
 //LOOPDELAY - INDICA EL RETRASO QUE TENDRÁ EL MÉTODO VOID-LOOP
-int LOOPDELAY = 50;
+int LOOPDELAY = 0;
 
 //S_MONITOR_BAUDRATE - INDICA LOS BAUDIOS DEL MONITOR SERIAL
 int S_MONITOR_BAUDRATE = 9600;
 
 //DOWN_LIMIT_DISTANCE - INDICA LA EL MÍNIMO DE DISTANCIA PARA SER CONSIDERADA VÁLIDA (MEDIDO EN CM)
-float DOWN_LIMIT_DISTANCE = 0;
+float DOWN_LIMIT_DISTANCE = 0.0;
 
-//UP_LIMIT_DISTANCE - INDICA LA EL MAXIMO DE DISTANCIA PARA SER CONSIDERADA VÁLIDA (MEDIDO EN CM)
-float UP_LIMIT_DISTANCE = 45;
+//UP_LIMIT_DISTANCE - INDICA LA EL MÍNIMO DE DISTANCIA PARA SER CONSIDERADA VÁLIDA (MEDIDO EN CM)
+float UP_LIMIT_DISTANCE = 45.0;
+
+//STEPSPERREVOLUTION - INDICA EL NÚMERO DE PASOS NECESARIOS PARA COMPLETAR UNA REVOLUCIÓN
+//MODELO DE MOTORES: NEMA 17 - 17HS4023
+const int stepsPerRevolution = 200;
 
 /*============================================================ - PIN DECLARATIONS - ============================================================*/
 
@@ -32,6 +35,10 @@ BluetoothSerial SerialBT;
 
 //TRYLED - LED DE PRUEBAS
 int tryled = 2;
+
+/*============================== - SENSORS - ==============================*/
+
+//
 
 /*=============== - INFRARED SENSORS - ===============*/
 
@@ -54,9 +61,8 @@ int US1_TRIGG = 32;
 int US1_ECHO = 35;
 
 //2ND ULTRASONIC (US2) - SEGUNDO ULTRASÓNICO
-//int US2_TRIGG = 21;
 int US2_TRIGG = 21;
-int US2_ECHO = 19; // 22
+int US2_ECHO = 19;
 
 //3RD ULTRASONIC (US3) - TERCER ULTRASÓNICO
 int US3_TRIGG = 33;
@@ -64,23 +70,11 @@ int US3_ECHO = 25;
 
 /*============================== - MOTORS - ==============================*/
 
-// CONEXIONES DEL MOTOR IZQUIERDO
-const int AIn1_IZQ = 26;
-const int AIn2_IZQ = 27;
-const int BIn1_IZQ = 14;
-const int BIn2_IZQ = 12;
+//STEPPETDER - MOTOR STEPPER DERECHO
+AccelStepper stepperDer(AccelStepper::FULL4WIRE, 19, 18, 5, 17);
 
-// CONEXIONES DEL MOTOR DERECHO
-const int AIn1_DER = 22;
-const int AIn2_DER = 5;
-const int BIn1_DER = 17;
-const int BIn2_DER = 16;
-
-const int NORM_SPD = 300;
-const int SLOW_SPD = 270;
-
-AccelStepper STEPPER_LEFT(AccelStepper::FULL4WIRE, AIn1_IZQ, AIn2_IZQ, BIn1_IZQ, BIn2_IZQ);  // PARA CONTROLAR EL MOTOR IZQUIERDO
-AccelStepper STEPPER_RIGHT(AccelStepper::FULL4WIRE, AIn1_DER, AIn2_DER, BIn1_DER, BIn2_DER);  // PARA CONTROLAR EL MOTOR DERECHO
+//STEPPETDER - MOTOR STEPPER IZQUIERDO
+AccelStepper stepperIzq(AccelStepper::FULL4WIRE, 32, 33, 25, 26);
 
 /*============================================================ - SETUP - ============================================================*/
 void setup() {
@@ -119,26 +113,6 @@ void setup() {
   pinMode(US3_TRIGG, OUTPUT);
   //ECHO
   pinMode(US3_ECHO, INPUT);
-
-  pinMode(AIn1_IZQ, OUTPUT);
-  pinMode(AIn2_IZQ, OUTPUT);
-  pinMode(BIn1_IZQ, OUTPUT);
-  pinMode(BIn2_IZQ, OUTPUT);
-
-  pinMode(AIn1_DER, OUTPUT);
-  pinMode(AIn2_DER, OUTPUT);
-  pinMode(BIn1_DER, OUTPUT);
-  pinMode(BIn2_DER, OUTPUT);
-  
-  // ACELERACIÓN, VELOCIDAD Y VELOCIDAD MAXIMA DEL MOTOR IZQUIERDO
-  STEPPER_LEFT.setAcceleration(150);
-  STEPPER_LEFT.setMaxSpeed(500);
-  STEPPER_LEFT.setSpeed(NORM_SPD);
-  
-  // ACELERACIÓN, VELOCIDAD Y VELOCIDAD MAXIMA DEL MOTOR DERECHO  
-  STEPPER_RIGHT.setAcceleration(150);
-  STEPPER_RIGHT.setMaxSpeed(500);
-  STEPPER_RIGHT.setSpeed(NORM_SPD);
 
   //INITIALIZING SERIAL MONITOR
   Serial.begin(S_MONITOR_BAUDRATE);
@@ -260,7 +234,7 @@ int find_out_ir() {
   }
 }
 
-/*============================== - ULTRA SONIC SENSORS - ==============================*/
+/*============================== - INFRARED SENSORS - ==============================*/
 
 /*
   SENSE_SINGLE_US(INT US_PIN_OUT, INT US_PIN_IN) - SENSA EL SENSOR DECLARADO
@@ -323,11 +297,23 @@ void sense_all_us() {
         Serial.print("Avanzar hacia adelante - Distancia objeto: ");
         Serial.print(distance_US_1);
         Serial.println(" cm");
-        moving(-200,200,NORM_SPD,NORM_SPD);
+        SerialBT.println("Avanzar hacia adelante");
+
+        stepperDer.setMaxSpeed(2000);
+        stepperDer.setAcceleration(1500);
+        //stepperDer.setSpeed(1500);
+        stepperDer.move(stepsPerRevolution);
+        
+        stepperIzq.setMaxSpeed(2000);
+        stepperIzq.setAcceleration(1500);
+        //stepperIzq.setSpeed(1500);
+        stepperIzq.move(-stepsPerRevolution);
+        
       }
       else {
         //Avanzar un poco hacia adelante
         Serial.println("Distancia no válida - Avanzar un poco hacia adelante ");
+        SerialBT.println("Distancia no válida - Avanzar un poco hacia adelante ");
       }
     }
     else {
@@ -337,11 +323,12 @@ void sense_all_us() {
         Serial.print("Girar 90° a la izquierda - Distancia objeto: ");
         Serial.print(distance_US_3);
         Serial.println(" cm");
-        moving(-150,-135,NORM_SPD,SLOW_SPD);
+        SerialBT.println("Girar 90° a la izquierda");
       }
       else {
         //Avanzar un poco hacia adelante
         Serial.println("Distancia no válida - Avanzar un poco hacia adelante ");
+        SerialBT.println("Distancia no válida - Avanzar un poco hacia adelante ");
       }
     }
   }
@@ -353,11 +340,12 @@ void sense_all_us() {
         Serial.print("Girar 90° a la derecha - Distancia objeto: ");
         Serial.print(distance_US_2);
         Serial.println(" cm");
-        moving(135,150,SLOW_SPD,NORM_SPD);
+        SerialBT.println("Girar 90° a la derecha");
       }
       else {
         //Avanzar un poco hacia adelante
         Serial.println("Distancia no válida - Avanzar un poco hacia adelante ");
+        SerialBT.println("Distancia no válida - Avanzar un poco hacia adelante ");
       }      
     }
     else {
@@ -367,146 +355,131 @@ void sense_all_us() {
         Serial.print("Girar 90° a la izquierda - Distancia objeto: ");
         Serial.print(distance_US_3);
         Serial.println(" cm");
+        SerialBT.println("Girar 90° a la izquierda");
       }
       else {
         //Avanzar un poco hacia adelante
         Serial.println("Distancia no válida - Avanzar un poco hacia adelante ");
+        SerialBT.println("Distancia no válida - Avanzar un poco hacia adelante ");
       }      
     }
   }
 }
 
-void moving(long L_STEP,long R_STEP,long L_SPD,long R_SPD) {
-  STEPPER_LEFT.moveTo(L_STEP);
-  STEPPER_RIGHT.moveTo(R_STEP);
-  STEPPER_LEFT.setSpeed(L_SPD);
-  STEPPER_RIGHT.setSpeed(R_SPD);
-  while((STEPPER_LEFT.distanceToGo()> 0) && (STEPPER_RIGHT.distanceToGo()> 0)) {
-    STEPPER_LEFT.run();
-    STEPPER_RIGHT.run();
-    Serial.println("corriendo");
-    SerialBT.println("Corriendo");
-  }
-  Serial.println("deteniendo");
-  SerialBT.println("deteniendo");
-
-}
-
 /*============================================================ - LOOP - ============================================================*/
 void loop() {
-
+  //VERIFICA SI ALGUNO DE LOS MOTORES SE ENCUENTRA EN MOVIMIEBTIO Y SI NO SE HA SALIDO DEL ÁREA
+  //SI ALGUNO DE LOS MOTORES SE ENCUENTRA EN MOVIMIENTO Y SE ESTÁ DENTRO DEL ÁREA SE PROCEDE A
+  //MOVERSE A TRAVÉS DE LAS FUNCIONES RUN QUE SE ENCUENTRAN EN EL ELSE
+  //SI NINGÚN MOTOR SE MUEVE O SI SE SALE DEL ÁREA SE EJECUTA LO QUE ESTÁ DENTRO DEL IF
+  if(!stepperDer.isRunning() && !stepperIzq.isRunning() && sense_all_ir()) {
   //VERIFICANDO QUE SE ESTÉ DENTRO DEL ÁREA
-  if (sense_all_ir() == true) {
-    //TODOS LOS SENSORES ESTÁN DENTRO DEL ÁREA
-    //SE PROCEDE A SENSAR CON LOS SENSORES ULTRASÓNICOS
-    Serial.println("Todo en orden... Se procede a sensar ultrasonicos...");
-    sense_all_us();
-  }
-  else {
-    //AL MENOS UNO DE LOS SENSORES NO ESTÁ DENTRO DEL ÁREA
-
-    //SE BUSCA CUAL O CUALES SENSORES SE ENCUENTRAN FUERA DEL ÁREA
-    int irs_out_of_area = find_out_ir();
-
-    //SE SELECCIONA DE ACUERDO AL CASO
-    switch (irs_out_of_area) {
-
-      case 1234:
-        //RECONOCIMIENTO DE PÉRDIDA
-        Serial.println("Todos los infrarojos estan fuera - Hemos perdido.");
-        SerialBT.println("Todos los infrarojos estan fuera - Hemos perdido.");
-        break;
-
-      case 123:
-        //GIRAR UN POCO A LA IZQUIERDA YENDO HACIA ADELANTE Y RUEDAS TRASERA HACIA ADELANTE
-        Serial.println("IR-D Dentro del area - Gira 45° adelante-izquierda y luego avanza.");
-        SerialBT.println("IR-D Dentro del area - Gira 45° adelante-izquierda y luego avanza.");
-        break;
-
-      case 124:
-        //GIRAR UN POCO A LA IZQUIERDA YENDO HACIA ATRÁS Y RUEDAS DELANTERAS HACIA ATRÁS
-        Serial.println("IR-C Dentro del area - Gira 45° atras-izquierda y luego retrocede.");
-        SerialBT.println("IR-C Dentro del area - Gira 45° atras-izquierda y luego retrocede.");
-        //Se puede girar luego 180°?
-        break;
-
-      case 12:
-        //GIRAR 90 GRADOS A LA IZQUIERDA YENDO HACIA ADELANTE Y LUEGO AVANZAR
-        Serial.println("IR-C e IR-D Dentro del area - Gira 90° adelante-izquierda y luego avanza.");
-        SerialBT.println("IR-C e IR-D Dentro del area - Gira 90° adelante-izquierda y luego avanza.");
-        moving(-150,-135,NORM_SPD,SLOW_SPD);
-        break;
-
-      case 134:
-        //GIRAR UN POCO HACIA LA DERECHA YENDO HACIA ATRAS Y LUEGO RUEDAS DELANTERAS HACIA ATRÁS
-        Serial.println("IR-B Dentro del area - Gira 45° atras-derecha y luego retrocede.");
-        SerialBT.println("IR-B Dentro del area - Gira 45° atras-derecha y luego retrocede.");
-        //Se puede girar luego 180°?
-        break;
-
-      case 14:
-        // RETROCEDER
-        Serial.println("IR-B e IR-C Dentro del area - Retrocede y gira 180°.");
-        SerialBT.println("IR-B e IR-C Dentro del area - Retrocede y gira 180°.");
-        moving(100,-100,NORM_SPD,NORM_SPD);
-        break;
-
-      case 1:
-        //GIRAR UN POCO HACIA LA IZQUIERDA YENDO HACIA ATRAS Y LUEGO DAR VUELTA PARA BUSCAR OPONENTE
-        Serial.println("IR-B, IR-C e IR-D Dentro del area - Gira 45° atras-izquierda y gira 180°.");
-        SerialBT.println("IR-B, IR-C e IR-D Dentro del area - Gira 45° atras-izquierda y gira 180°.");
-        moving(100,-100,NORM_SPD,NORM_SPD);
-        break;
-
-      case 234:
-        //GIRAR HACIA LA DERECHA YENDO HACIA ADELANTE Y LUEGO TRASERAS HACIA ADELANTE
-        Serial.println("IR-A Dentro del area - Gira 45° adelante-derecha y avanza.");
-        SerialBT.println("IR-A Dentro del area - Gira 45° adelante-derecha y avanza.");
-        break;
-
-      case 23:
-        //AVANZAR
-        Serial.println("IR-A e IR-D Dentro del area - Avanza.");
-        SerialBT.println("IR-A e IR-D Dentro del area - Avanza.");
-        moving(-100,100,NORM_SPD,NORM_SPD);
-        break;
-
-      case 2:
-        //GIRAR HACIA LA IZQUIERDA YENDO HACIA ADELANTE
-        Serial.println("IR-A, IR-C e IR-D Dentro del area - gira 45° adelante-izquierda y avanza.");
-        SerialBT.println("IR-A, IR-C e IR-D Dentro del area - gira 45° adelante-izquierda y avanza.");
-        moving(-100,100,NORM_SPD,NORM_SPD);
-        break;
-
-      case 34:
-        //GIRAR 90 GRADOS A LA DERECHA YENDO HACIA ADELANTE Y LUEGO AVANZAR
-        Serial.println("IR-A e IR-B Dentro del area - gira 90° adelante-derecha y avanza.");
-        SerialBT.println("IR-A e IR-B Dentro del area - gira 90° adelante-derecha y avanza.");
-        moving(135,150,SLOW_SPD,NORM_SPD);
-        break;
-
-      case 3:
-        //GIRAR UN POCO HACIA LA DERECHA YENDO HACIA ADELANTE
-        Serial.println("IR-A, IR-B e IR-D Dentro del area - gira 45° adelante-derecha y avanza.");
-        SerialBT.println("IR-A, IR-B e IR-D Dentro del area - gira 45° adelante-derecha y avanza.");
-        moving(-100,100,NORM_SPD,NORM_SPD);
-        break;
-
-      case 4:
-        //GIRAR UN POCO HACIA LA DERECHA YENDO HACIA ATRAS
-        Serial.println("IR-A, IR-B e IR-C Dentro del area - gira 45° atras-izquierda y gira 180°.");
-        SerialBT.println("IR-A, IR-B e IR-C Dentro del area - gira 45° atras-izquierda y gira 180°.");
-        moving(100,-100,NORM_SPD,NORM_SPD);
-        break;
-
-      default:
-        //LOOP O BUSCAR OPONENTE
-        Serial.println("Algo anda mal... Este mensaje no deberia estarse reproduciendo... ");
-        SerialBT.println("Algo anda mal... Este mensaje no deberia estarse reproduciendo... ");
-        break;
+    if (sense_all_ir() == true) {
+      //TODOS LOS SENSORES ESTÁN DENTRO DEL ÁREA
+      //SE PROCEDE A SENSAR CON LOS SENSORES ULTRASÓNICOS
+      Serial.println("Todo en orden... Se procede a sensar ultrasonicos...");
+      sense_all_us();
+    }
+    else {
+      //AL MENOS UNO DE LOS SENSORES NO ESTÁ DENTRO DEL ÁREA
+  
+      //SE BUSCA CUAL O CUALES SENSORES SE ENCUENTRAN FUERA DEL ÁREA
+      int irs_out_of_area = find_out_ir();
+  
+      //SE SELECCIONA DE ACUERDO AL CASO
+      switch (irs_out_of_area) {
+  
+        case 1234:
+          //RECONOCIMIENTO DE PÉRDIDA
+          Serial.println("Todos los infrarojos estan fuera - Hemos perdido.");
+          SerialBT.println("Todos los infrarojos estan fuera - Hemos perdido.");
+          break;
+  
+        case 123:
+          //GIRAR UN POCO A LA IZQUIERDA YENDO HACIA ADELANTE Y RUEDAS TRASERA HACIA ADELANTE
+          Serial.println("IR-D Dentro del area - Gira 45° adelante-izquierda y luego avanza.");
+          SerialBT.println("IR-D Dentro del area - Gira 45° adelante-izquierda y luego avanza.");
+          break;
+  
+        case 124:
+          //GIRAR UN POCO A LA IZQUIERDA YENDO HACIA ATRÁS Y RUEDAS DELANTERAS HACIA ATRÁS
+          Serial.println("IR-C Dentro del area - Gira 45° atras-izquierda y luego retrocede.");
+          SerialBT.println("IR-C Dentro del area - Gira 45° atras-izquierda y luego retrocede.");
+          //Se puede girar luego 180°?
+          break;
+  
+        case 12:
+          //GIRAR 90 GRADOS A LA IZQUIERDA YENDO HACIA ADELANTE Y LUEGO AVANZAR
+          Serial.println("IR-C e IR-D Dentro del area - Gira 90° adelante-izquierda y luego avanza.");
+          SerialBT.println("IR-C e IR-D Dentro del area - Gira 90° adelante-izquierda y luego avanza.");
+          break;
+  
+        case 134:
+          //GIRAR UN POCO HACIA LA DERECHA YENDO HACIA ATRAS Y LUEGO RUEDAS DELANTERAS HACIA ATRÁS
+          Serial.println("IR-B Dentro del area - Gira 45° atras-derecha y luego retrocede.");
+          SerialBT.println("IR-B Dentro del area - Gira 45° atras-derecha y luego retrocede.");
+          //Se puede girar luego 180°?
+          break;
+  
+        case 14:
+          // RETROCEDER
+          Serial.println("IR-B e IR-C Dentro del area - Retrocede y gira 180°.");
+          SerialBT.println("IR-B e IR-C Dentro del area - Retrocede y gira 180°.");
+          break;
+  
+        case 1:
+          //GIRAR UN POCO HACIA LA IZQUIERDA YENDO HACIA ATRAS Y LUEGO DAR VUELTA PARA BUSCAR OPONENTE
+          Serial.println("IR-B, IR-C e IR-D Dentro del area - Gira 45° atras-izquierda y gira 180°.");
+          SerialBT.println("IR-B, IR-C e IR-D Dentro del area - Gira 45° atras-izquierda y gira 180°.");
+          break;
+  
+        case 234:
+          //GIRAR HACIA LA DERECHA YENDO HACIA ADELANTE Y LUEGO TRASERAS HACIA ADELANTE
+          Serial.println("IR-A Dentro del area - Gira 45° adelante-derecha y avanza.");
+          SerialBT.println("IR-A Dentro del area - Gira 45° adelante-derecha y avanza.");
+          break;
+  
+        case 23:
+          //AVANZAR
+          Serial.println("IR-A e IR-D Dentro del area - Avanza.");
+          SerialBT.println("IR-A e IR-D Dentro del area - Avanza.");
+          break;
+  
+        case 2:
+          //GIRAR HACIA LA IZQUIERDA YENDO HACIA ADELANTE
+          Serial.println("IR-A, IR-C e IR-D Dentro del area - gira 45° adelante-izquierda y avanza.");
+          SerialBT.println("IR-A, IR-C e IR-D Dentro del area - gira 45° adelante-izquierda y avanza.");
+          break;
+  
+        case 34:
+          //GIRAR 90 GRADOS A LA DERECHA YENDO HACIA ADELANTE Y LUEGO AVANZAR
+          Serial.println("IR-A e IR-B Dentro del area - gira 90° adelante-derecha y avanza.");
+          SerialBT.println("IR-A e IR-B Dentro del area - gira 90° adelante-derecha y avanza.");
+          break;
+  
+        case 3:
+          //GIRAR UN POCO HACIA LA DERECHA YENDO HACIA ADELANTE
+          Serial.println("IR-A, IR-B e IR-D Dentro del area - gira 45° adelante-derecha y avanza.");
+          SerialBT.println("IR-A, IR-B e IR-D Dentro del area - gira 45° adelante-derecha y avanza.");
+          break;
+  
+        case 4:
+          //GIRAR UN POCO HACIA LA DERECHA YENDO HACIA ATRAS
+          Serial.println("IR-A, IR-B e IR-C Dentro del area - gira 45° atras-izquierda y gira 180°.");
+          SerialBT.println("IR-A, IR-B e IR-C Dentro del area - gira 45° atras-izquierda y gira 180°.");
+          break;
+  
+        default:
+          //LOOP O BUSCAR OPONENTE
+          Serial.println("Algo anda mal... Este mensaje no deberia estarse reproduciendo... ");
+          SerialBT.println("Algo anda mal... Este mensaje no deberia estarse reproduciendo... ");
+          break;
+      }
     }
   }
-
-  //DELAYING LOOP
-  delay(LOOPDELAY);
+  else {
+    //Si uno de 
+    stepperDer.run();
+    stepperIzq.run();
+  }
 }
